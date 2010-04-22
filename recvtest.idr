@@ -1,18 +1,24 @@
 include "bittwiddle.idr";
 
-processPacket : Maybe Recv -> IO ();
-processPacket Nothing = putStrLn "Nothing received";
-processPacket (Just (mkRecv buf host port)) = do {
+processPacket : Socket -> Maybe Recv -> IO ();
+processPacket acc Nothing = putStrLn "Nothing received";
+processPacket acc (Just (mkRecv buf host port)) = do {
       dumpPacket buf;
       putStrLn ("Received from " ++ host ++ ":" ++ showInt port);
+      send acc buf;
 };
 
 recvLoop : Socket -> IO ();
 recvLoop conn = do {
 	 acc <- TCPAccept conn;
-         d <- recv acc;
-         processPacket d;
-	 closeSocket acc;
+	 fork ( do { d <- recv acc;
+              	     processPacket acc d;
+		     putStrLn "Gratuitous testing pause...";
+		     sleep 10;
+		     putStrLn "Pause done...";
+	             closeSocket acc;
+                   }
+              );
          recvLoop conn;
 };
 

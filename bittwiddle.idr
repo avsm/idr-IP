@@ -174,7 +174,8 @@ nullPtr ptr = unsafePerformIO (
 		   return (if_then_else (p==1) True False);
                  });
 
-data Socket = mkCon Ptr;
+data Socket = mkCon Ptr | noCon;
+
 data Recv = mkRecv RawPacket String Int;
 
 -- FIXME: Opening a socket might fail! Will return a null pointer if so.
@@ -182,32 +183,40 @@ data Recv = mkRecv RawPacket String Int;
 clientSocket : String -> Int -> IO Socket;
 clientSocket server port = do {
 	     sock <- f_clientSocket server port;
-	     return (mkCon sock); };
+	     if (nullPtr sock) then (return noCon) else
+	                            (return (mkCon sock)); };
 
 serverSocket : Int -> IO Socket;
 serverSocket port = do {
 	     sock <- f_serverSocket port;
-	     return (mkCon sock); };
+	     if (nullPtr sock) then (return noCon) else 
+                                    (return (mkCon sock)); };
 
 TCPConnect : String -> Int -> IO Socket;
 TCPConnect server port = do {
 	     sock <- f_tcpSocket server port;
-	     return (mkCon sock); };
+	     if (nullPtr sock) then (return noCon) else 
+                                    (return (mkCon sock)); };
 
 TCPListen : Int -> Int -> IO Socket;
 TCPListen port maxcon = do {
 	     sock <- f_tcpListen port maxcon;
-	     return (mkCon sock); };
+	     if (nullPtr sock) then (return noCon) else 
+	                            (return (mkCon sock)); };
 
 TCPAccept : Socket -> IO Socket;
+TCPAccept noCon = return noCon;
 TCPAccept (mkCon s) = do {
-	     s' <- f_tcpAccept s;
-	     return (mkCon s'); };
+	     sock <- f_tcpAccept s;
+	     if (nullPtr sock) then (return noCon) else 
+	                            (return (mkCon sock)); };
 
 closeSocket : Socket -> IO ();
+closeSocket noCon = return II;
 closeSocket (mkCon s) = f_closeSocket s;
 
 sendTo : Socket -> String -> Int -> RawPacket -> IO ();
+sendTo noCon _ _ _ = return II;
 sendTo (mkCon c) server port dat 
        = do { v <- f_sendUDP c server port dat;
 	      return II; };
@@ -222,16 +231,19 @@ doMkRecv False rcv = do {
 };
 
 recvFrom : Socket -> IO (Maybe Recv);
+recvFrom noCon = return Nothing;
 recvFrom (mkCon c) = do {
 	 rcv <- f_recvUDP c;
 	 doMkRecv (nullPtr rcv) rcv;
 };
 
 send : Socket -> RawPacket -> IO ();
+send noCon dat = return II;
 send (mkCon c) dat = do { v <- f_sendTCP c dat;
      	       	     	  return II; };
 
 recv : Socket -> IO (Maybe Recv);
+recv noCon = return Nothing;
 recv (mkCon c) = do {
 	 rcv <- f_recvTCP c;
 	 doMkRecv (nullPtr rcv) rcv;

@@ -454,7 +454,7 @@ void* net_recvTCP(void* conn) {
 	return NULL;
     } 
 
-    printf("Received %d bytes from %s:UDP%u\n", 
+    printf("Received %d bytes from %s:%u\n", 
 	   recvlen,inet_ntoa(me.sin_addr),
 	   ntohs(me.sin_port));
 
