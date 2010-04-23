@@ -139,12 +139,17 @@ include "bittwiddle.idr";
 
 -- Section: The DSL
 
-  infixl 5 :|: ;
+  infixl 5 // ;
+
+  -- IF makes a choice based on some known data, and corresponds to a
+  -- concrete type computed from that data.
+  -- // makes a choice based on what parses, and corresponds to an
+  -- 'Either' type. (i.e. it's alternation in ABNF)
 
   data PacketLang : Set -> Set where
       CHUNK : (c:Chunk) -> PacketLang (chunkTy c)
     | IF : Bool -> PacketLang T -> PacketLang T -> PacketLang T
-    | (:|:) : PacketLang T -> PacketLang T -> PacketLang T
+    | (//) : PacketLang T -> PacketLang T -> PacketLang T
     | BINDC : (c:Chunk) -> (chunkTy c -> PacketLang V) ->
               PacketLang V;
 
@@ -154,7 +159,7 @@ include "bittwiddle.idr";
   BIND : PacketLang T -> (T -> PacketLang V) -> PacketLang V;
   BIND (CHUNK c) k = BINDC c k;
   BIND (IF x t e) k = IF x (BIND t k) (BIND e k);
-  BIND (l :|: r) k = (BIND l k) :|: (BIND r k) ;
+  BIND (l // r) k = (BIND l k) // (BIND r k) ;
   BIND (BINDC c k) k' = BINDC c (\cv => BIND (k cv) k');
 
 {-- And, so that we don't need to write down too many types, let's hide
@@ -169,7 +174,7 @@ include "bittwiddle.idr";
   mkTy' : PacketLang T -> Set;
   mkTy' (CHUNK c) = chunkTy c;
   mkTy' (IF x t e) = if x then (mkTy' t) else (mkTy' e);
-  mkTy' (l :|: r) = Either (mkTy' l) (mkTy' r);
+  mkTy' (l // r) = Either (mkTy' l) (mkTy' r);
   mkTy' (BINDC c k) = (x ** mkTy' (k x));
 
   mkTy : PacketFormat -> Set;
@@ -184,7 +189,7 @@ include "bittwiddle.idr";
     = depIfV {P=\x => mkTy' (IF x t e)} x d
                    (\pt => bitLength' d)
 		   (\pe => bitLength' d);
-  bitLength' {p = l :|: r} d
+  bitLength' {p = l // r} d
     = either d (\l => bitLength' l) (\r => bitLength' r);
   bitLength' {p=BINDC c k} d = chunkLength c (getSigIdx d) + bitLength' (getSigVal d);
 
@@ -209,7 +214,7 @@ unmarshal' (IF x t e) pos pkt
     = depIf {P = \x => Maybe (mkTy' (IF x t e))} x
             (unmarshal' t pos pkt)
             (unmarshal' e pos pkt);
-unmarshal' (l :|: r) pos pkt 
+unmarshal' (l // r) pos pkt 
    = maybe (unmarshal' l pos pkt)
        (maybe (unmarshal' r pos pkt)
               Nothing
@@ -244,7 +249,7 @@ marshal' {p=IF x t e} v pos pkt
      = depIfV {P=\x => mkTy' (IF x t e)} x v 
               (\vt => marshal' {p=t} vt pos pkt)
               (\ve => marshal' {p=e} ve pos pkt);
-marshal' {p = l :|: r} v pos pkt
+marshal' {p = l // r} v pos pkt
     = either v (\lv => marshal' lv pos pkt) 
                (\rv => marshal' rv pos pkt);
 marshal' {p=BINDC c k} p pos pkt 
