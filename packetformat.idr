@@ -1,17 +1,24 @@
 include "IPDSL.idr";
 
+cheese = 0;
+biscuits = 1;
+tea = 2;
+coffee = 3;
+
 -- Simple packet format - a 2 bit version number which must be 1, then
 -- a null-terminated string (which is going to be inconveniently
 -- aligned, but we'll deal with that...) which must be shorter than 16
 -- characters. 
 
 do using (BIND, CHUNK) {
+
   simplePacket : PacketFormat;
   simplePacket = Packet do {
       ver <- bits 2;
       fact (p_bool (value ver == 1));
       str <- CString;
       fact (p_bool (strLen str < 16));
+      Options 2 (Cons cheese (Cons biscuits (Cons tea Nil)));
       CHUNK end;
   };
 }
@@ -30,9 +37,10 @@ do using (BIND, CHUNK) {
 
 sendData : String -> mkTy simplePacket;
 sendData x with (choose (strLen x < 16)) {
-    | Right p =  BInt 1 oh ## oh ## x ## p ## II;
-    | Left  p = BInt 1 oh ## oh ## "String too long" ## oh ## II;
+    | Right p =  BInt 1 oh ## oh ## x ## p ## Opt (BInt biscuits oh) oh ## II;
+    | Left  p = BInt 1 oh ## oh ## "String too long" ## oh 
+                          ## Opt (BInt biscuits oh) oh ## II;
 }
 
-getData : mkTy simplePacket -> String;
-getData (_ ## _ ## x ## _ ## _) = x;
+getData : mkTy simplePacket -> (String & Int);
+getData (_ ## _ ## x ## _ ## teatime ## _) = (x, ovalue teatime);

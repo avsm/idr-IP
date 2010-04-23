@@ -78,11 +78,26 @@ getBInt32 (B32 x p) = getInt32 x;
 bound32Proof : (b:Bounded32 x) -> so ((getBInt32 b) < x);
 bound32Proof (B32 x p) = p;
 
+-- Yes, it's just 'elem'. Need type classes...
+
+validOption : Int -> List Int -> Bool;
+validOption x Nil = False;
+validOption x (Cons y ys) = if x==y then True else (validOption x ys);
+
 data Bounded : Int -> Set where
      BInt : (x:Int) -> (so (x<i)) -> Bounded i;
 
 value : Bounded i -> Int;
 value (BInt v _) = v;
+
+data Option : Int -> List Int -> Set where
+     Opt : (x:Bounded w) -> (so (validOption (value x) xs)) -> Option w xs;
+
+ovalue : Option i xs -> Int;
+ovalue (Opt (BInt v _) _) = v;
+
+bvalue : Option i xs -> Bounded i;
+bvalue (Opt b _) = b;
 
 boundProof : (b:Bounded i) -> so ((value b) < i);
 boundProof (BInt _ p) = p;

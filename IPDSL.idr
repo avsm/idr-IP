@@ -93,6 +93,7 @@ include "bittwiddle.idr";
 
   data Chunk : Set where
       bit : (width: Int) -> (so (width>0)) -> Chunk
+    | options : (width: Int) -> (so (width>0)) -> List Int -> Chunk
     | Cstring : Chunk
     | len : Chunk
     | prop : (P:Prop) -> Chunk
@@ -104,6 +105,7 @@ include "bittwiddle.idr";
 
   chunkTy : Chunk -> Set;
   chunkTy (bit w p) = Bounded (1 << w);
+  chunkTy (options w p xs) = Option (1 << w) xs;
   chunkTy Cstring = String;
   chunkTy len = Int;
   chunkTy (prop P) = propTy P;
@@ -113,6 +115,7 @@ include "bittwiddle.idr";
 
   chunkLength : (t:Chunk) -> chunkTy t -> Int;
   chunkLength (bit w p) _ = w;
+  chunkLength (options w p _) _ = w;
   chunkLength Cstring p = 8 * (strLen p + 1); -- Null terminated
   chunkLength len _ = 0;
   chunkLength (prop p) _ = 0;
@@ -203,6 +206,13 @@ include "bittwiddle.idr";
 unmarshalChunk : (c:Chunk) -> Int -> RawPacket -> Maybe (chunkTy c);
 unmarshalChunk (bit w p) pos pkt ?= 
       getField pkt pos (pos + w) (ltAdd w p);  [rewriteField]
+unmarshalChunk (options w p xs) pos pkt 
+      with unmarshalChunk (bit w p) pos pkt {
+       | Nothing = Nothing;
+       | Just jv = either (choose (validOption (value jv) xs))
+                        (\lp => Nothing)
+	                (\rp => Just (Opt jv rp)); 
+}
 unmarshalChunk Cstring pos pkt = getString pkt pos;
 unmarshalChunk len pos pkt = Just pos;
 unmarshalChunk (prop p) pos pkt = testProp p;
@@ -235,9 +245,11 @@ marshalChunk (bit w p) v pos pkt
      	  putStrLn ((showInt pos) ++ ", " ++ (showInt (pos+w)) ++ ": " ++ showInt (value v'));
      	  return (pos+w); 
         };
+marshalChunk (options w p xs) v pos pkt 
+    = marshalChunk (bit w p) (bvalue v) pos pkt;
 marshalChunk Cstring v pos pkt
    = do { setString pkt pos v;
-     	  return (pos+(strLen v * 8));
+     	  return (pos+((1 + strLen v) * 8));
         };
 marshalChunk len v pos pkt = return pos;
 marshalChunk (prop p) v pos pkt = return pos;
@@ -272,6 +284,7 @@ syntax bitsp n = CHUNK (bit (value n) ?);
 syntax fact n = CHUNK (prop n);
 syntax offset = CHUNK len;
 syntax CString = CHUNK Cstring;
+syntax Options n xs = CHUNK (options n oh xs);
 
 infixr 5 ## ;
 syntax (##) x y = <| x, y |>;

@@ -23,5 +23,5 @@ main = do { let p = sendData "Hello there";
 	    echop <- getPkt echop';
 	    closeSocket conn;
 
-	    putStrLn (getData (fromJust (unmarshal simplePacket echop)));
+	    putStrLn (fst (getData (fromJust (unmarshal simplePacket echop))));
 	  };

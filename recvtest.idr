@@ -7,8 +7,9 @@ processPacket : Socket -> Maybe Recv -> IO ();
 processPacket acc Nothing = putStrLn "Nothing received";
 processPacket acc (Just (mkRecv buf host port)) = do {
       dumpPacket buf;
-      let str = getData (fromJust (unmarshal simplePacket buf));
-      putStrLn ("Received " ++ str ++ " from " ++ host ++ ":" ++ showInt port);
+      let strd = getData (fromJust (unmarshal simplePacket buf));
+      putStrLn ("Received " ++ fst strd ++ ", " ++ showInt (snd strd)
+                ++ " from " ++ host ++ ":" ++ showInt port);
       send acc buf;
 };
 
