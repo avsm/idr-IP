@@ -8,3 +8,7 @@ ltAdd y = __Prove_Anything;
 
 addSub : (x:Int) -> (y:Int) -> (x = ((y + x) - y));
 addSub = __Prove_Anything;
+
+check : (T:Bool) -> Either (so T) (so (not T));
+check True = Left oh;
+check False = Right oh;

@@ -1,10 +1,14 @@
-include "bittwiddle.idr";
+include "packetformat.idr";
+
+fromJust : Maybe a -> a;
+fromJust (Just x) = x;
 
 processPacket : Socket -> Maybe Recv -> IO ();
 processPacket acc Nothing = putStrLn "Nothing received";
 processPacket acc (Just (mkRecv buf host port)) = do {
       dumpPacket buf;
-      putStrLn ("Received from " ++ host ++ ":" ++ showInt port);
+      let str = getData (fromJust (unmarshal simplePacket buf));
+      putStrLn ("Received " ++ str ++ " from " ++ host ++ ":" ++ showInt port);
       send acc buf;
 };
 

@@ -139,9 +139,12 @@ include "bittwiddle.idr";
 
 -- Section: The DSL
 
+  infixl 5 :|: ;
+
   data PacketLang : Set -> Set where
       CHUNK : (c:Chunk) -> PacketLang (chunkTy c)
     | IF : Bool -> PacketLang T -> PacketLang T -> PacketLang T
+    | (:|:) : PacketLang T -> PacketLang T -> PacketLang T
     | BINDC : (c:Chunk) -> (chunkTy c -> PacketLang V) ->
               PacketLang V;
 
@@ -151,6 +154,7 @@ include "bittwiddle.idr";
   BIND : PacketLang T -> (T -> PacketLang V) -> PacketLang V;
   BIND (CHUNK c) k = BINDC c k;
   BIND (IF x t e) k = IF x (BIND t k) (BIND e k);
+  BIND (l :|: r) k = (BIND l k) :|: (BIND r k) ;
   BIND (BINDC c k) k' = BINDC c (\cv => BIND (k cv) k');
 
 {-- And, so that we don't need to write down too many types, let's hide
@@ -165,6 +169,7 @@ include "bittwiddle.idr";
   mkTy' : PacketLang T -> Set;
   mkTy' (CHUNK c) = chunkTy c;
   mkTy' (IF x t e) = if x then (mkTy' t) else (mkTy' e);
+  mkTy' (l :|: r) = Either (mkTy' l) (mkTy' r);
   mkTy' (BINDC c k) = (x ** mkTy' (k x));
 
   mkTy : PacketFormat -> Set;
@@ -174,12 +179,14 @@ include "bittwiddle.idr";
 
   bitLength' : {p:PacketLang T} -> mkTy' p -> Int;
   
-  bitLength' {p=CHUNK c} p = chunkLength c p;
-  bitLength' {p=IF x t e} p 
-    = depIfV {P=\x => mkTy' (IF x t e)} x p
-                   (\pt => bitLength' p)
-		   (\pe => bitLength' p);
-  bitLength' {p=BINDC c k} p = chunkLength c (getSigIdx p) + bitLength' (getSigVal p);
+  bitLength' {p=CHUNK c} d = chunkLength c d;
+  bitLength' {p=IF x t e} d 
+    = depIfV {P=\x => mkTy' (IF x t e)} x d
+                   (\pt => bitLength' d)
+		   (\pe => bitLength' d);
+  bitLength' {p = l :|: r} d
+    = either d (\l => bitLength' l) (\r => bitLength' r);
+  bitLength' {p=BINDC c k} d = chunkLength c (getSigIdx d) + bitLength' (getSigVal d);
 
   bitLength : mkTy pf -> Int;
   bitLength {pf=Packet p} d = bitLength' d;
@@ -202,6 +209,12 @@ unmarshal' (IF x t e) pos pkt
     = depIf {P = \x => Maybe (mkTy' (IF x t e))} x
             (unmarshal' t pos pkt)
             (unmarshal' e pos pkt);
+unmarshal' (l :|: r) pos pkt 
+   = maybe (unmarshal' l pos pkt)
+       (maybe (unmarshal' r pos pkt)
+              Nothing
+	      (\y => Just (Right y)))
+       (\x => Just (Left x));
 unmarshal' (BINDC c k) pos pkt 
    = maybe (unmarshalChunk c pos pkt) Nothing 
         (\v => maybe (unmarshal' (k v) (pos + chunkLength c v) pkt)
@@ -231,6 +244,9 @@ marshal' {p=IF x t e} v pos pkt
      = depIfV {P=\x => mkTy' (IF x t e)} x v 
               (\vt => marshal' {p=t} vt pos pkt)
               (\ve => marshal' {p=e} ve pos pkt);
+marshal' {p = l :|: r} v pos pkt
+    = either v (\lv => marshal' lv pos pkt) 
+               (\rv => marshal' rv pos pkt);
 marshal' {p=BINDC c k} p pos pkt 
     = do { pos' <- marshalChunk c (getSigIdx p) pos pkt;
       	   marshal' (getSigVal p) pos' pkt; 
@@ -251,6 +267,9 @@ syntax bitsp n = CHUNK (bit (value n) ?);
 syntax fact n = CHUNK (prop n);
 syntax offset = CHUNK len;
 syntax CString = CHUNK Cstring;
+
+infixr 5 ## ;
+syntax (##) x y = <| x, y |>;
 
 do using (BIND, CHUNK) {
   testPacket : PacketFormat;
