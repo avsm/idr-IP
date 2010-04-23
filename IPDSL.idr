@@ -286,6 +286,8 @@ syntax offset = CHUNK len;
 syntax CString = CHUNK Cstring;
 syntax Options n xs = CHUNK (options n oh xs);
 
+syntax Option x = Opt (BInt x oh) oh;
+
 infixr 5 ## ;
 syntax (##) x y = <| x, y |>;
 

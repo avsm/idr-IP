@@ -18,7 +18,7 @@ do using (BIND, CHUNK) {
       fact (p_bool (value ver == 1));
       str <- CString;
       fact (p_bool (strLen str < 16));
-      Options 2 (Cons cheese (Cons biscuits (Cons tea Nil)));
+      Options 2 [cheese, biscuits, tea];
       CHUNK end;
   };
 }
@@ -37,9 +37,9 @@ do using (BIND, CHUNK) {
 
 sendData : String -> mkTy simplePacket;
 sendData x with (choose (strLen x < 16)) {
-    | Right p =  BInt 1 oh ## oh ## x ## p ## Opt (BInt biscuits oh) oh ## II;
+    | Right p =  BInt 1 oh ## oh ## x ## p ## Option tea ## II;
     | Left  p = BInt 1 oh ## oh ## "String too long" ## oh 
-                          ## Opt (BInt biscuits oh) oh ## II;
+                          ## Option biscuits ## II;
 }
 
 getData : mkTy simplePacket -> (String & Int);

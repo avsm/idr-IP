@@ -11,32 +11,32 @@ data Int32 = I32 Ptr;
 data RawPacket = RPkt Ptr Int;
 
 f_mkInt32 = mkForeign (FFun "mkInt32"
-	              (Cons FInt Nil) FPtr) %eval;
+	              (Cons FInt Nil) FPtr); [%eval]
 
 f_getInt = mkForeign (FFun "getInt"
-	   	     (Cons FPtr Nil) FInt) %eval;
+	   	     (Cons FPtr Nil) FInt); [%eval]
 
 f_getBits = mkForeign (FFun "getBits"
-	    	      (Cons FPtr (Cons FInt (Cons FInt Nil))) FPtr) %eval;
+	    	      (Cons FPtr (Cons FInt (Cons FInt Nil))) FPtr); [%eval]
 
 f_setBits = mkForeign (FFun "setBits"
 	    	      (Cons FPtr (Cons FInt (Cons FInt (Cons FInt Nil)))) 
-		      FPtr) %eval;
+		      FPtr); [%eval]
 
 f_newPacket = mkForeign (FFun "newPacket"
-                        (Cons FInt Nil) FPtr) %eval;
+                        (Cons FInt Nil) FPtr); [%eval]
 f_dumpPacket = mkForeign (FFun "dumpPacket"
-                         (Cons FPtr (Cons FInt Nil)) FUnit) %eval;
+                         (Cons FPtr (Cons FInt Nil)) FUnit); [%eval]
 f_setPacketBits = mkForeign (FFun "setPacketBits"
                             (Cons FPtr (Cons FInt (Cons FInt (Cons FInt Nil))))
-			    FUnit) %eval;
+			    FUnit); [%eval]
 f_getPacketBits = mkForeign (FFun "getPacketBits"
                             (Cons FPtr (Cons FInt (Cons FInt Nil)))
-			    FInt) %eval;
+			    FInt); [%eval]
 
 f_setPacketString = mkForeign (FFun "setPacketString"
                             (Cons FPtr (Cons FInt (Cons FStr Nil)))
-			    FUnit) %eval;
+			    FUnit); [%eval]
 
 newPacket : Int -> IO RawPacket;
 newPacket l = do { p <- f_newPacket l;
@@ -149,39 +149,39 @@ so_it_is proof {
 -- Some networking glue
 
 f_clientSocket = mkForeign (FFun "net_UDP_clientSocket"
-	                 (Cons FStr (Cons FInt Nil)) FPtr) %eval;
+	                 (Cons FStr (Cons FInt Nil)) FPtr); [%eval]
 f_serverSocket = mkForeign (FFun "net_UDP_serverSocket"
-	                 (Cons FInt Nil) FPtr) %eval;
+	                 (Cons FInt Nil) FPtr); [%eval]
 f_tcpSocket = mkForeign (FFun "net_TCP_socket"
-	                 (Cons FStr (Cons FInt Nil)) FPtr) %eval;
+	                 (Cons FStr (Cons FInt Nil)) FPtr); [%eval]
 f_tcpListen = mkForeign (FFun "net_TCP_listen"
-	                 (Cons FInt (Cons FInt Nil)) FPtr) %eval;
+	                 (Cons FInt (Cons FInt Nil)) FPtr); [%eval]
 f_tcpAccept = mkForeign (FFun "net_TCP_accept"
-	                 (Cons FPtr Nil) FPtr) %eval;
+	                 (Cons FPtr Nil) FPtr); [%eval]
 f_closeSocket = mkForeign (FFun "net_closeSocket"
-	                  (Cons FPtr Nil) FUnit) %eval;
+	                  (Cons FPtr Nil) FUnit); [%eval]
 
 
 f_sendUDP = mkForeign (FFun "net_sendUDP"
      (Cons FPtr (Cons FStr (Cons FInt (Cons (FAny RawPacket) Nil)))) 
-     FInt) %eval;
+     FInt); [%eval]
 f_recvUDP = mkForeign (FFun "net_recvUDP"
-		   (Cons FPtr Nil) FPtr) %eval;
+		   (Cons FPtr Nil) FPtr); [%eval]
 
 f_sendTCP = mkForeign (FFun "net_sendTCP"
      (Cons FPtr (Cons (FAny RawPacket) Nil))
-     FInt) %eval;
+     FInt); [%eval]
 f_recvTCP = mkForeign (FFun "net_recvTCP"
-		   (Cons FPtr Nil) FPtr) %eval;
+		   (Cons FPtr Nil) FPtr); [%eval]
 
 f_recvBuf = mkForeign (FFun "get_recvBuf"
-		   (Cons FPtr Nil) (FAny RawPacket)) %eval;
+		   (Cons FPtr Nil) (FAny RawPacket)); [%eval]
 f_recvServer = mkForeign (FFun "get_recvServer"
-		   (Cons FPtr Nil) FStr) %eval;
+		   (Cons FPtr Nil) FStr); [%eval]
 f_recvPort = mkForeign (FFun "get_recvPort"
-		   (Cons FPtr Nil) FInt) %eval;
+		   (Cons FPtr Nil) FInt); [%eval]
 
-f_nullPtr = mkForeign (FFun "nullPtr" (Cons FPtr Nil) FInt) %eval;
+f_nullPtr = mkForeign (FFun "nullPtr" (Cons FPtr Nil) FInt); [%eval]
 
 nullPtr : Ptr -> Bool;
 nullPtr ptr = unsafePerformIO (
