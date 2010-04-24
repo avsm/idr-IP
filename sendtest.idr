@@ -14,7 +14,7 @@ getPkt (Just (mkRecv buf host port)) = do {
 fromJust : Maybe a -> a;
 fromJust (Just x) = x;
 
-main = do { let p = sendData "Hello there";
+main = do { let p = sendData "Hello there world";
        	    let pkt = marshal p;
 	    dumpPacket pkt; 
 	    conn <- TCPConnect "localhost" 3456;

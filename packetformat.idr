@@ -12,13 +12,18 @@ coffee = 3;
 
 do using (BIND, CHUNK) {
 
+  IPAddress = do { bits 8; bits 8; bits 8; bits 8; };
+
+  syntax V x = BInt x oh;
+  	      	  
   simplePacket : PacketFormat;
   simplePacket = Packet do {
       ver <- bits 2;
       fact (p_bool (value ver == 1));
-      str <- CString;
-      fact (p_bool (strLen str < 16));
+      len <- bits 4;
+      str <- LString (value len);
       Options 2 [cheese, biscuits, tea];
+      IPAddress;
       CHUNK end;
   };
 }
@@ -36,11 +41,19 @@ do using (BIND, CHUNK) {
 -- work with.
 
 sendData : String -> mkTy simplePacket;
-sendData x with (choose (strLen x < 16)) {
-    | Right p =  BInt 1 oh ## oh ## x ## p ## Option tea ## II;
-    | Left  p = BInt 1 oh ## oh ## "String too long" ## oh 
-                          ## Option biscuits ## II;
+sendData x with choose (strLen x < 16) {
+   | Right p = BInt 1 oh ## oh ## BInt (strLen x) p ## x ## Option tea ## 
+      	      	 V 129 ## V 234 ## V 200 ## V 100 ## II;
+
+   -- truncate the string
+   | Left p = BInt 1 oh ## oh ## BInt 15 oh ## x ## Option tea ## 
+      	      	 V 129 ## V 234 ## V 200 ## V 100 ## II;
 }
 
 getData : mkTy simplePacket -> (String & Int);
-getData (_ ## _ ## x ## _ ## teatime ## _) = (x, ovalue teatime);
+getData (_ ## _ ## _ ## x ## teatime ## _ ## _ ## _ ## _ ## _) 
+      = (x, ovalue teatime);
+
+getIP : mkTy simplePacket -> (Int & Int & Int & Int);
+getIP (_ ## _ ## _ ## _ ## _ ## a ## b ## c ## d ## _) 
+    = (value a, value b, value c, value d);

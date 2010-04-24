@@ -89,12 +89,16 @@ include "bittwiddle.idr";
     "bit" is a number of bits, and "prop" is some arbitrary predicate,
     which in practice would be a predicate on some other data appearing
     in the packet. "len" tells us how many bits we've got so far.
+
+    'Cstring' is a null-terminated C string. 'Lstring' is a string
+    with an explicit length.
 --}
 
   data Chunk : Set where
       bit : (width: Int) -> (so (width>0)) -> Chunk
     | options : (width: Int) -> (so (width>0)) -> List Int -> Chunk
     | Cstring : Chunk
+    | Lstring : Int -> Chunk
     | len : Chunk
     | prop : (P:Prop) -> Chunk
     | end : Chunk;
@@ -107,6 +111,7 @@ include "bittwiddle.idr";
   chunkTy (bit w p) = Bounded (1 << w);
   chunkTy (options w p xs) = Option (1 << w) xs;
   chunkTy Cstring = String;
+  chunkTy (Lstring i) = String; -- maybe a length proof too?
   chunkTy len = Int;
   chunkTy (prop P) = propTy P;
   chunkTy end = ();
@@ -117,6 +122,7 @@ include "bittwiddle.idr";
   chunkLength (bit w p) _ = w;
   chunkLength (options w p _) _ = w;
   chunkLength Cstring p = 8 * (strLen p + 1); -- Null terminated
+  chunkLength (Lstring i) _ = 8 * i; -- Not null terminated
   chunkLength len _ = 0;
   chunkLength (prop p) _ = 0;
   chunkLength end _ = 0;
@@ -214,6 +220,7 @@ unmarshalChunk (options w p xs) pos pkt
 	                (\rp => Just (Opt jv rp)); 
 }
 unmarshalChunk Cstring pos pkt = getString pkt pos;
+unmarshalChunk (Lstring i) pos pkt = getStringn pkt pos i;
 unmarshalChunk len pos pkt = Just pos;
 unmarshalChunk (prop p) pos pkt = testProp p;
 unmarshalChunk end pos pkt = Just II;
@@ -251,6 +258,10 @@ marshalChunk Cstring v pos pkt
    = do { setString pkt pos v;
      	  return (pos+((1 + strLen v) * 8));
         };
+marshalChunk (Lstring i) v pos pkt
+   = do { setStringn pkt pos v i;
+     	  return (pos+(i * 8));
+        };
 marshalChunk len v pos pkt = return pos;
 marshalChunk (prop p) v pos pkt = return pos;
 marshalChunk end v pos pkt = return pos;
@@ -284,6 +295,7 @@ syntax bitsp n = CHUNK (bit (value n) ?);
 syntax fact n = CHUNK (prop n);
 syntax offset = CHUNK len;
 syntax CString = CHUNK Cstring;
+syntax LString i = CHUNK (Lstring i);
 syntax Options n xs = CHUNK (options n oh xs);
 
 syntax Option x = Opt (BInt x oh) oh;
@@ -292,6 +304,7 @@ infixr 5 ## ;
 syntax (##) x y = <| x, y |>;
 
 do using (BIND, CHUNK) {
+
   testPacket : PacketFormat;
   testPacket = Packet do {
   	       	 ver <- bits 2; 

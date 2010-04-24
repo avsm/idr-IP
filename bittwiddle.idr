@@ -35,7 +35,7 @@ f_getPacketBits = mkForeign (FFun "getPacketBits"
 			    FInt); [%eval]
 
 f_setPacketString = mkForeign (FFun "setPacketString"
-                            (Cons FPtr (Cons FInt (Cons FStr Nil)))
+                         (Cons FPtr (Cons FInt (Cons FStr (Cons FInt Nil))))
 			    FUnit); [%eval]
 
 newPacket : Int -> IO RawPacket;
@@ -119,7 +119,10 @@ setField : RawPacket -> (start:Int) -> (end:Int) ->
 setField pkt start end (BInt v _) = setPacketBits pkt start (end-1) v;
 
 setString : RawPacket -> (start:Int) -> String -> IO ();
-setString (RPkt pkt len) start v = f_setPacketString pkt start v;
+setString (RPkt pkt len) start v = f_setPacketString pkt start v (-1);
+
+setStringn : RawPacket -> (start:Int) -> String -> Int -> IO ();
+setStringn (RPkt pkt len) start v slen = f_setPacketString pkt start v slen;
 
 -- Maybe better as a primitive in C?
 
@@ -133,6 +136,18 @@ getString' pkt pos acc with getField pkt pos (pos+8) (ltAdd 8 oh) {
 
 getString : RawPacket -> Int -> Maybe String;
 getString pkt pos = getString' pkt pos "";
+
+getStringn' : RawPacket -> Int -> String -> Nat -> Maybe String;
+getStringn' pkt pos acc (S k) with getField pkt pos (pos+8) (ltAdd 8 oh) {
+   | Just vin = let v = value vin in
+     	        if (v==0) then (Just (strRev acc)) else
+     	         (getStringn' pkt (pos+8) (strCons (__intToChar v) acc) k);
+   | Nothing = Nothing;
+}
+getStringn' pkt pos acc O = Just (strRev acc);
+
+getStringn : RawPacket -> Int -> Int -> Maybe String;
+getStringn pkt pos len = getStringn' pkt pos "" (intToNat len);
 
 boundFin : Bounded (1 << (natToInt x)) -> Fin (power (S (S O)) (S x));
 	               

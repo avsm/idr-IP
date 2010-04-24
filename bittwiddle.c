@@ -157,12 +157,13 @@ void setPacketBits(PACKET p, int start, int end, int data) {
     }
 }
 
-void setPacketString(PACKET p, int start, char* s) {
+void setPacketString(PACKET p, int start, char* s, int l) {
     int i;
-    while(*s!='\0') {
+    while(*s!='\0' && (l>0 || l==-1)) {
 	setPacketBits(p, start, start+7, (int)(*s));
 	start+=8;
 	++s;
+	--l;
     }
 }
 
