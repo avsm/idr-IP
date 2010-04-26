@@ -155,10 +155,13 @@ include "bittwiddle.idr";
   -- // makes a choice based on what parses, and corresponds to an
   -- 'Either' type. (i.e. it's alternation in ABNF)
 
+  -- GROUP allows sub-sections of a packet format to be grouped together.
+
   data PacketLang : Set -> Set where
       CHUNK : (c:Chunk) -> PacketLang (chunkTy c)
     | IF : Bool -> PacketLang T -> PacketLang T -> PacketLang T
     | (//) : PacketLang T -> PacketLang T -> PacketLang T
+    | GROUP : PacketLang T -> PacketLang T
     | BINDC : (c:Chunk) -> (chunkTy c -> PacketLang V) ->
               PacketLang V;
 
@@ -169,6 +172,7 @@ include "bittwiddle.idr";
   BIND (CHUNK c) k = BINDC c k;
   BIND (IF x t e) k = IF x (BIND t k) (BIND e k);
   BIND (l // r) k = (BIND l k) // (BIND r k) ;
+  BIND (GROUP g) k = GROUP (BIND g k);
   BIND (BINDC c k) k' = BINDC c (\cv => BIND (k cv) k');
 
 {-- And, so that we don't need to write down too many types, let's hide
@@ -183,6 +187,7 @@ include "bittwiddle.idr";
   mkTy' : PacketLang T -> Set;
   mkTy' (CHUNK c) = chunkTy c;
   mkTy' (IF x t e) = if x then (mkTy' t) else (mkTy' e);
+  mkTy' (GROUP t) = mkTy' t;
   mkTy' (l // r) = Either (mkTy' l) (mkTy' r);
   mkTy' (BINDC c k) = (x ** mkTy' (k x));
 
@@ -198,6 +203,7 @@ include "bittwiddle.idr";
     = depIfV {P=\x => mkTy' (IF x t e)} x d
                    (\pt => bitLength' d)
 		   (\pe => bitLength' d);
+  bitLength' {p = GROUP g} d = bitLength' {p=g} d;
   bitLength' {p = l // r} d
     = either d (\l => bitLength' l) (\r => bitLength' r);
   bitLength' {p=BINDC c k} d = chunkLength c (getSigIdx d) + bitLength' (getSigVal d);
@@ -231,6 +237,7 @@ unmarshal' (IF x t e) pos pkt
     = depIf {P = \x => Maybe (mkTy' (IF x t e))} x
             (unmarshal' t pos pkt)
             (unmarshal' e pos pkt);
+unmarshal' (GROUP g) pos pkt = unmarshal' g pos pkt;
 unmarshal' (l // r) pos pkt 
    = maybe (unmarshal' l pos pkt)
        (maybe (unmarshal' r pos pkt)
@@ -272,6 +279,8 @@ marshal' {p=IF x t e} v pos pkt
      = depIfV {P=\x => mkTy' (IF x t e)} x v 
               (\vt => marshal' {p=t} vt pos pkt)
               (\ve => marshal' {p=e} ve pos pkt);
+marshal' {p=GROUP g} v pos pkt
+     = marshal' {p=g} v pos pkt;
 marshal' {p = l // r} v pos pkt
     = either v (\lv => marshal' lv pos pkt) 
                (\rv => marshal' rv pos pkt);
@@ -302,6 +311,12 @@ syntax Option x = Opt (BInt x oh) oh;
 
 infixr 5 ## ;
 syntax (##) x y = <| x, y |>;
+
+{-- Note: Instead of the syntax stuff above, it would perhaps be
+    better if Idris had a reflection mechanism which converted data
+    declarations (which do look a bit like ABNF, as observed by
+    Saleem) into a PacketFormat and generated the associated
+    machinery. --}
 
 do using (BIND, CHUNK) {
 
