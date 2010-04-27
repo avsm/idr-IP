@@ -5,23 +5,7 @@ include "so_what.idr";
 
 -- First, the primitive versions using unsafe C call evilness.
 
--- A 32 bit integer.
-data Int32 = I32 Ptr;
-
 data RawPacket = RPkt Ptr Int;
-
-f_mkInt32 = mkForeign (FFun "mkInt32"
-	              (Cons FInt Nil) FPtr); [%eval]
-
-f_getInt = mkForeign (FFun "getInt"
-	   	     (Cons FPtr Nil) FInt); [%eval]
-
-f_getBits = mkForeign (FFun "getBits"
-	    	      (Cons FPtr (Cons FInt (Cons FInt Nil))) FPtr); [%eval]
-
-f_setBits = mkForeign (FFun "setBits"
-	    	      (Cons FPtr (Cons FInt (Cons FInt (Cons FInt Nil)))) 
-		      FPtr); [%eval]
 
 f_newPacket = mkForeign (FFun "newPacket"
                         (Cons FInt Nil) FPtr); [%eval]
@@ -50,33 +34,6 @@ setPacketBits (RPkt p l) s e dat = f_setPacketBits p s e dat;
 
 getPacketBits : RawPacket -> Int -> Int -> IO Int;
 getPacketBits (RPkt p l) s e = f_getPacketBits p s e;
-
-mkInt32 : Int -> Int32;
-mkInt32 x = I32 (unsafePerformIO (f_mkInt32 x));
-
-getInt32 : Int32 -> Int;
-getInt32 (I32 x) = unsafePerformIO (f_getInt x);
-
-getBits' : Int32 -> Int -> Int -> Int32;
-getBits' (I32 x) start end 
-          = I32 (unsafePerformIO (f_getBits x start end));
-
-setBits' : Int32 -> Int -> Int -> Int -> Int32;
-setBits' (I32 x) start end new 
-	  = I32 (unsafePerformIO (f_setBits x start end new));
-
--- Now the versions with nice types we actually want to use and export.
-
--- a 32 bit integer with an upper bound. (Bounded32 i gives an integer < i)
-
-data Bounded32 : Int -> Set where
-     B32 : (x:Int32) -> (so (getInt32 x < i)) -> Bounded32 i;
-
-getBInt32 : Bounded32 i -> Int;
-getBInt32 (B32 x p) = getInt32 x;
-
-bound32Proof : (b:Bounded32 x) -> so ((getBInt32 b) < x);
-bound32Proof (B32 x p) = p;
 
 -- Yes, it's just 'elem'. Need type classes...
 
