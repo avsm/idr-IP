@@ -22,13 +22,25 @@ PACKET newPacket(int length) {
     return p;
 }
 
+void dump_binary(int x)
+{
+    unsigned int z;
+    for (z = 1 << 31; z > 0; z >>= 1)
+    {
+        putchar(((x & z) == z) ? '1' : '0');
+    }
+}
+
+
 void dumpPacket(PACKET p, int length) {
     int i;
     int words = length >> 5;
     if ((length & 31)!=0) words++; // Need one more if it's not exactly aligned
 
     for (i=0; i<words; ++i) {
-	printf("%x ", p[i]);
+	printf("%x      \t", p[i]);
+	dump_binary(p[i]);
+	printf("\n");
     }
     printf("\n");
 }
@@ -57,6 +69,8 @@ word32 setnbits(word32 v, int startoff, int endoff, int data) {
     return (v | nv);
 }
 
+
+
 word32 getnbits(word32 v, int startbit, int endbit) {
 //    printf("Getting %d, %d\n", startbit, endbit);
     return (v << startbit) >> (startbit + (32-endbit));
@@ -66,15 +80,17 @@ void setPacketByte(PACKET p, int b, int data) {
     p[b] = data;
 }
 
+// 01 00001010 01000001 01000001 100000
+
 void setPacketBits(PACKET p, int start, int end, int data) {
     int startb = start >> 5; // Word the start bits are in
     int endb = end >> 5;     // Word the end bits are in
 
     int startoff = start & 31; // Offset of start bits in that word
-    int endoff = end & 31; // Offset of end bits in that word
+    int endoff = (end & 31)+1; // Offset of end bits in that word
 
     if (startb==endb) { // In the same word, easy...
-	p[startb] = setnbits(p[startb], startoff, endoff+1, data);
+	p[startb] = setnbits(p[startb], startoff, endoff, data);
     } else {
 	// Set the least significant 32-[startoff] bits of p[startb] to
 	// [data] >> [endoff].
@@ -106,15 +122,18 @@ int getPacketBits(PACKET p, int start, int end) {
     int endb = end >> 5;     // Word the end bits are in
 
     int startoff = start & 31; // Offset of start bits in that word
-    int endoff = end & 31; // Offset of end bits in that word
+    int endoff = 1 + (end & 31); // Offset of end bits in that word
+    int rv;
 
     if (startb==endb) {
-	return getnbits(p[startb], startoff, endoff+1);
+	rv = getnbits(p[startb], startoff, endoff);
     } else {
 	int startn = getnbits(p[startb], startoff, 32);
 	int endn = getnbits(p[endb], 0, endoff);
-	return (startn << endoff) + endn; 
+	rv = (startn << endoff) + endn; 
     }
+    printf("%d to %d is %d\n", start, end, rv);
+    return rv;
 }
 
 // Now some network code

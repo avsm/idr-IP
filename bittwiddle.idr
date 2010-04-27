@@ -33,7 +33,7 @@ setPacketBits : RawPacket -> Int -> Int -> Int -> IO ();
 setPacketBits (RPkt p l) s e dat = f_setPacketBits p s e dat;
 
 getPacketBits : RawPacket -> Int -> Int -> IO Int;
-getPacketBits (RPkt p l) s e = f_getPacketBits p s e;
+getPacketBits (RPkt p l) s e = f_getPacketBits p s e; 
 
 -- Yes, it's just 'elem'. Need type classes...
 
@@ -65,7 +65,7 @@ getField (RPkt pkt len) start end _
    = if ((start<=len) && (end<=len)) then
        (Just 
          (BInt (unsafePerformIO (getPacketBits (RPkt pkt len) start (end-1))) 
-           ?so_it_is))
+           __Prove_Anything)) -- It's from C, we need to trust it...
        else Nothing;
 
 -- These really need proofs that there is space in the packet rep. It's okay
@@ -111,12 +111,13 @@ boundFin : Bounded (1 << (natToInt x)) -> Fin (power (S (S O)) (S x));
 -- This arises from some C, which we can't prove anything about...
 -- so we'll just have to trust it.
 
+{-
 so_it_is proof {
 	%intro;
 	%refine __Prove_Anything;
 	%qed;
 };
-
+-}
 
 -- Some networking glue
 

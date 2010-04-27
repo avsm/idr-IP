@@ -1,7 +1,9 @@
 include "packetformat.idr";
 
-fromJust : Maybe a -> a;
-fromJust (Just x) = x;
+fromJust : Maybe a -> IO a;
+fromJust (Just x) = return x;
+fromJust Nothing = do { putStrLn "FAIL";
+	 	      	__Prove_Anything; };
 
 showIP : (Int & Int & Int & Int) -> String;
 showIP (a,b,c,d) = showInt a ++ "." ++ showInt b ++ "." ++ 
@@ -11,11 +13,10 @@ processPacket : Socket -> Maybe Recv -> IO ();
 processPacket acc Nothing = putStrLn "Nothing received";
 processPacket acc (Just (mkRecv buf host port)) = do {
       dumpPacket buf;
-      let dat = (fromJust (unmarshal simplePacket buf));
-      let strd = getData dat;
+      dat <- (fromJust (unmarshal simplePacket buf));
+      putStrLn "Unmarshaled";
+      dumpData dat;
       let ip = getIP dat;
-      putStrLn ("Received " ++ fst strd ++ ", " ++ showInt (snd strd)
-                ++ " from " ++ host ++ ":" ++ showInt port);
       putStrLn ("Received " ++ showIP ip);
       send acc buf;
 };

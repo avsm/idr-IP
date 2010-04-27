@@ -11,17 +11,20 @@ getPkt (Just (mkRecv buf host port)) = do {
     putStrLn ("Ping from " ++ host ++ ":" ++ showInt port);
     return buf; };
 
-fromJust : Maybe a -> a;
-fromJust (Just x) = x;
+fromJust : Maybe a -> IO a;
+fromJust (Just x) = return x;
+fromJust Nothing = do { putStrLn "FAIL";
+	 	      	__Prove_Anything; };
 
-main = do { let p = sendData "Hello there world";
+
+main = do { let p = sendData ["Hello world", "Sossidges"];
        	    let pkt = marshal p;
 	    dumpPacket pkt; 
+	    dat <- (fromJust (unmarshal simplePacket pkt));
+	    dumpData dat;
 	    conn <- TCPConnect "localhost" 3456;
 	    send conn pkt;
 	    echop' <- recv conn;
 	    echop <- getPkt echop';
 	    closeSocket conn;
-
-	    putStrLn (fst (getData (fromJust (unmarshal simplePacket echop))));
 	  };
