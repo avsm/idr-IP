@@ -199,10 +199,12 @@ include "bittwiddle.idr";
   bitLength' : {p:PacketLang T} -> mkTy' p -> Int;
   
   bitLength' {p=CHUNK c} d = chunkLength c d;
-  bitLength' {p=IF x t e} d 
+  bitLength' {p=IF True t e} d = bitLength' {p=t} d;
+  bitLength' {p=IF False t e} d = bitLength' {p=e} d;
+{-  bitLength' {p=IF x t e} d 
     = depIfV {P=\x => mkTy' (IF x t e)} x d
-                   (\pt => bitLength' d)
-		   (\pe => bitLength' d);
+                   (\pt => bitLength' {p=IF True t e} d)
+		   (\pe => bitLength' {p=IF False t e} d); -}
   bitLength' {p = GROUP g} d = bitLength' {p=g} d;
   bitLength' {p = l // r} d
     = either d (\l => bitLength' l) (\r => bitLength' r);
@@ -233,10 +235,13 @@ unmarshalChunk end pos pkt = Just II;
 
 unmarshal' : (p:PacketLang T) -> Int -> RawPacket -> Maybe (mkTy' p);
 unmarshal' (CHUNK c) pos pkt = unmarshalChunk c pos pkt;
-unmarshal' (IF x t e) pos pkt 
+unmarshal' (IF True t e) pos pkt = unmarshal' t pos pkt;
+unmarshal' (IF False t e) pos pkt = unmarshal' e pos pkt;
+{-
     = depIf {P = \x => Maybe (mkTy' (IF x t e))} x
             (unmarshal' t pos pkt)
             (unmarshal' e pos pkt);
+-}
 unmarshal' (GROUP g) pos pkt = unmarshal' g pos pkt;
 unmarshal' (l // r) pos pkt 
    = maybe (unmarshal' l pos pkt)
@@ -275,10 +280,14 @@ marshalChunk end v pos pkt = return pos;
 
 marshal' : {p:PacketLang T} -> mkTy' p -> Int -> RawPacket -> IO Int;
 marshal' {p=CHUNK c} v pos pkt = marshalChunk c v pos pkt;
+marshal' {p=IF True t e} v pos pkt = marshal' {p=t} v pos pkt;
+marshal' {p=IF False t e} v pos pkt = marshal' {p=e} v pos pkt;
+{-
 marshal' {p=IF x t e} v pos pkt 
      = depIfV {P=\x => mkTy' (IF x t e)} x v 
               (\vt => marshal' {p=t} vt pos pkt)
               (\ve => marshal' {p=e} ve pos pkt);
+-}
 marshal' {p=GROUP g} v pos pkt
      = marshal' {p=g} v pos pkt;
 marshal' {p = l // r} v pos pkt
