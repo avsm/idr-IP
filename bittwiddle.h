@@ -11,26 +11,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-// Use pointers to an int, because an Idris Int is only 31 bits!
-// void* is just what Idris wants.
-typedef void* INT32;
-
-// FIXME: not always, but it is on this machine...
 typedef uint32_t word32;
-
-// Create a new Int32 with the given value
-INT32 mkInt32(word32 v);
-
-// Convert an Int32 to a normal Int
-word32 getInt(INT32 v);
-
-// Take the most significant bits from startbit to endbit inclusive, and
-// return a new int32
-INT32 getBits(INT32 num, word32 startbit, word32 endbit);
-
-// Set the most signifcant bits from startbit to endbit inclusive, with
-// the value 'newval', and return a new int32.
-INT32 setBits(INT32 num, word32 startbit, word32 endbit, word32 newval);
 
 ///////// Packet data
 
