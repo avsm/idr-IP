@@ -28,6 +28,8 @@ void setPacketString(PACKET p, int start, char* string, int l);
 int getPacketByte(PACKET p, int b);
 int getPacketBits(PACKET p, int start, int end);
 
+VAL get_recvBuf(void *);
+
 //// Code for sending packets across a wire
 
 // Anything waiting on a socket?

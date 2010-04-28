@@ -346,13 +346,13 @@ void* net_recvUDP(void* conn) {
 	return NULL;
     }
 
-    int recvlen = recvfrom(s, buf, 512*sizeof(word32), 0, (struct sockaddr *)&other, &slen);
+    intptr_t recvlen = recvfrom(s, buf, 512*sizeof(word32), 0, (struct sockaddr *)&other, &slen);
 
     if (recvlen==-1) {
 	return NULL;
     } 
 
-    printf("Received %d bytes from %s:UDP%u\n", 
+    printf("Received %ld bytes from %s:UDP%u\n", 
 	   recvlen,inet_ntoa(other.sin_addr),
 	   ntohs(other.sin_port));
 
@@ -398,13 +398,13 @@ void* net_recvTCP(void* conn) {
 	return NULL;
     }
 
-    int recvlen = recv(s, buf, 512*sizeof(word32), 0);
+    uintptr_t recvlen = recv(s, buf, 512*sizeof(word32), 0);
 
     if (recvlen==-1) {
 	return NULL;
     } 
 
-    printf("Received %d bytes from %s:%u\n", 
+    printf("Received %ld bytes from %s:%u\n", 
 	   recvlen,inet_ntoa(me.sin_addr),
 	   ntohs(me.sin_port));
 
