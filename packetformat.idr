@@ -16,18 +16,23 @@ do using (BIND, CHUNK) {
 
   syntax V x = BInt x oh;
 
-  labels = do { len <- bits 4;
-      	    	fact (p_bool (value len > 0));
-                str <- LString (value len);
-	 	CHUNK end;
-	      };
+  labelStr = do { len <- bits 8;
+      	          fact (p_bool (value len > 0 && value len < 193));
+                  str <- LString (value len);
+	          CHUNK end;
+	        };
+
+  label = do { LIST labelStr;
+               isRef    <- bits 2;
+	       labelptr <- bits 6; -- Reference to another label, or zero.
+	       CHUNK end;
+	     };
 
   simplePacket : PacketFormat;
   simplePacket = Packet do {
       ver <- bits 2;
       fact (p_bool (value ver == 1));
-      LIST labels;
-      bits 8; -- better be zero!
+      label;
       Options 4 [cheese, biscuits, tea];
       IPAddress;
       CHUNK end;
@@ -46,28 +51,29 @@ do using (BIND, CHUNK) {
 -- 'getData' convert this from and to a type we might actually want to
 -- work with.
 
-convList : List String -> List (mkTy (Packet labels));
+convList : List String -> List (mkTy (Packet labelStr));
 convList Nil = Nil;
-convList (Cons x xs) with (choose (strLen x < 16), choose (strLen x > 0)) {
+convList (Cons x xs) with (choose (strLen x < 256), 
+	       	     	   choose (strLen x > 0 && strLen x < 193)) {
     | (Right up, Right down) 
          = Cons (BInt (strLen x) up ## down ## x ## II) (convList xs);
     | _ = Nil;
 }
 
 sendData : List String -> mkTy simplePacket;
-sendData xs = BInt 1 oh ## oh ## convList xs ## BInt 0 oh ## Option tea ## 
-      	      	 V 129 ## V 234 ## V 200 ## V 255 ## II;
+sendData xs = BInt 1 oh ## oh ## convList xs ## BInt 0 oh ## BInt 0 oh
+              ## II ## Option tea ## V 129 ## V 234 ## V 200 ## V 255 ## II;
 
-dumpList : List (mkTy (Packet labels)) -> IO ();
+dumpList : List (mkTy (Packet labelStr)) -> IO ();
 dumpList Nil = return II;
 dumpList (Cons (_ ## _ ## str ## _) xs) = do { putStrLn str;
 	       	       	      	    	       dumpList xs; };
 
 dumpData : mkTy simplePacket -> IO ();
-dumpData (_ ## _ ## xs ## _ ## teatime ## _ ## _ ## _ ## _ ## _) 
+dumpData (_ ## _ ## xs ## _ ## _ ## _ ## teatime ## _ ## _ ## _ ## _ ## _) 
       = do { putStrLn (showInt (ovalue teatime));
       	     dumpList xs; };
 
 getIP : mkTy simplePacket -> (Int & Int & Int & Int);
-getIP (_ ## _ ## _ ## _ ## _ ## a ## b ## c ## d ## _) 
+getIP (_ ## _ ## _ ## _ ## _ ## _ ## _ ## a ## b ## c ## d ## _) 
     = (value a, value b, value c, value d);

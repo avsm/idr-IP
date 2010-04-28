@@ -132,7 +132,7 @@ int getPacketBits(PACKET p, int start, int end) {
 	int endn = getnbits(p[endb], 0, endoff);
 	rv = (startn << endoff) + endn; 
     }
-    printf("%d to %d is %d\n", start, end, rv);
+//    printf("%d to %d is %d\n", start, end, rv);
     return rv;
 }
 

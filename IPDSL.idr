@@ -186,6 +186,7 @@ include "bittwiddle.idr";
   BIND (GROUP g) k = SEQ (GROUP g) (k II);
   BIND (LIST g) k = SEQ (LIST g) (k II);
   BIND (LISTN i g) k = SEQ (LISTN i g) (k II);
+  BIND (SEQ c kf) k = SEQ c (BIND kf k);
   BIND (BINDC c k) k' = BINDC c (\cv => BIND (k cv) k');
 
 {-- And, so that we don't need to write down too many types, let's hide
