@@ -87,7 +87,7 @@ getString' : RawPacket -> Int -> String -> Maybe String;
 getString' pkt pos acc with getField pkt pos (pos+8) (ltAdd 8 oh) {
    | Just vin = let v = value vin in
      	        if (v==0) then (Just (strRev acc)) else
-     	           (getString' pkt (pos+8) (strCons (__intToChar v) acc));
+     	           (getString' pkt (pos+8) (strCons (__intToChar v) acc));
    | Nothing = Nothing;
 }
 
